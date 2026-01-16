@@ -1,0 +1,100 @@
+services:
+
+  # MongoDB – Central Data Store
+  mongodb:
+    image: mongo:7.0
+    container_name: vaultedge-mongodb
+    ports:
+      - "27017:27017"
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: admin
+      MONGO_INITDB_ROOT_PASSWORD: vaultedge123
+      MONGO_INITDB_DATABASE: vaultedge
+    volumes:
+      - mongodb_data:/data/db
+      - ./infra/mongo-init.js:/docker-entrypoint-initdb.d/mongo-init.js:ro
+    networks:
+      - vaultedge-network
+    healthcheck:
+      test: echo 'db.runCommand("ping").ok' | mongosh localhost:27017/vaultedge --quiet
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Go Gateway – Transaction Ingestion Layer
+  gateway:
+    build:
+      context: ./gateway-go
+    container_name: vaultedge-gateway
+    ports:
+      - "8080:8080"
+    environment:
+      MONGO_URI: mongodb://admin:vaultedge123@mongodb:27017
+      RISK_ENGINE_URL: http://risk-engine:8081
+      PORT: 8080
+    depends_on:
+      mongodb:
+        condition: service_healthy
+    networks:
+      - vaultedge-network
+
+  # Rust Risk Engine – Core Fraud Evaluation
+  risk-engine:
+    build:
+      context: ./risk-engine-rust
+    container_name: vaultedge-risk-engine
+    ports:
+      - "8081:8081"
+    environment:
+      MONGO_URI: mongodb://admin:vaultedge123@mongodb:27017
+      PORT: 8081
+      HOME_COUNTRY: US
+      RUST_LOG: info
+    depends_on:
+      mongodb:
+        condition: service_healthy
+    networks:
+      - vaultedge-network
+
+  # .NET Control Plane – Rules & Audit API
+  control-plane:
+    build:
+      context: ./control-dotnet
+    container_name: vaultedge-control-plane
+    ports:
+      - "5050:5000"
+    environment:
+      MongoDB__ConnectionString: mongodb://admin:vaultedge123@mongodb:27017
+      MongoDB__DatabaseName: vaultedge
+      ASPNETCORE_ENVIRONMENT: Development
+      ASPNETCORE_URLS: http://+:5000
+    depends_on:
+      mongodb:
+        condition: service_healthy
+    networks:
+      - vaultedge-network
+
+  analyst-tools:
+    build:
+      context: ./analyst-ruby
+    container_name: vaultedge-analyst-tools
+    ports:
+      - "4567:4567"
+    environment:
+      MONGO_URI: mongodb://admin:vaultedge123@mongodb:27017
+      MONGO_DB: vaultedge
+      PORT: 4567
+    depends_on:
+      mongodb:
+        condition: service_healthy
+    networks:
+      - vaultedge-network
+
+# Internal Docker Network
+networks:
+  vaultedge-network:
+    driver: bridge
+
+# Persistent Volumes
+volumes:
+  mongodb_data:

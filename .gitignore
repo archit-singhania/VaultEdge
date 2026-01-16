@@ -1,0 +1,52 @@
+# General
+.DS_Store
+*.log
+*.swp
+*.swo
+*~
+
+# Go
+gateway-go/vendor/
+gateway-go/vaultedge-gateway
+
+# Rust
+risk-engine-rust/target/
+risk-engine-rust/Cargo.lock
+
+# .NET
+control-dotnet/bin/
+control-dotnet/obj/
+control-dotnet/*.user
+control-dotnet/*.suo
+
+# Haskell
+rules-haskell/.stack-work/
+rules-haskell/dist/
+rules-haskell/dist-newstyle/
+rules-haskell/*.cabal
+
+# Ruby
+analyst-ruby/.bundle/
+analyst-ruby/vendor/
+
+# Swift/iOS
+mobile-swift/DerivedData/
+mobile-swift/*.xcworkspace/
+mobile-swift/*.xcuserdata/
+mobile-swift/Pods/
+
+# Assembly
+asm-primitives/*.o
+asm-primitives/*.out
+
+# IDE
+.vscode/
+.idea/
+*.iml
+
+# Environment
+.env
+.env.local
+
+# MongoDB
+data/db/

@@ -1,0 +1,41 @@
+name: vaultedge-rules
+version: 0.1.0.0
+synopsis: VaultEdge Fraud Rule DSL Engine
+description: Pure functional rule evaluation engine for transaction risk assessment
+license: MIT
+author: VaultEdge Team
+maintainer: team@vaultedge.dev
+category: Finance
+
+dependencies:
+  - base >= 4.7 && < 5
+  - aeson
+  - text
+  - bytestring
+  - containers
+  - time
+  - scientific
+
+library:
+  source-dirs: src
+  exposed-modules:
+    - Rules.Types
+    - Rules.Engine
+    - Rules.Parser
+    - Rules.Evaluator
+
+executables:
+  vaultedge-rules:
+    main: Main.hs
+    source-dirs: app
+    dependencies:
+      - vaultedge-rules
+      - optparse-applicative
+
+tests:
+  vaultedge-rules-test:
+    main: Spec.hs
+    source-dirs: test
+    dependencies:
+      - vaultedge-rules
+      - hspec
