@@ -62,7 +62,7 @@ services:
       context: ./control-dotnet
     container_name: vaultedge-control-plane
     ports:
-      - "5050:5000"
+      - "8082:5000"
     environment:
       MongoDB__ConnectionString: mongodb://admin:vaultedge123@mongodb:27017
       MongoDB__DatabaseName: vaultedge

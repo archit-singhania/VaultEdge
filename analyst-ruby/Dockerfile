@@ -1,22 +1,19 @@
-# VaultEdge Analyst Tools (Ruby / Sinatra)
 FROM ruby:3.3-alpine
 
-# Set working directory
 WORKDIR /app
 
-# Install native dependencies for Mongo + Sinatra
+# Install build dependencies
 RUN apk add --no-cache build-base
 
-# Copy Ruby app
-COPY . .
+# Copy Gemfile
+COPY Gemfile* ./
 
-# Install dependencies
-RUN gem install bundler
+# Install gems
 RUN bundle install
 
-# Expose Sinatra port
+# Copy application
+COPY . .
+
 EXPOSE 4567
 
-# Start analyst dashboard
-CMD ["ruby", "app.rb"]
-
+CMD ["bundle", "exec", "ruby", "app.rb"]

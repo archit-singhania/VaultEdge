@@ -5,68 +5,55 @@
 
 set -e
 
+# Get the script directory and repo root
+SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+REPO_ROOT="$( cd "$SCRIPT_DIR/.." && pwd )"
+
 echo "🚀 Starting VaultEdge Services"
 echo "=============================="
+echo "Repository: $REPO_ROOT"
 echo ""
 
 # Colors
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
+BLUE='\033[0;34m'
 NC='\033[0m'
+
+# Change to repo root
+cd "$REPO_ROOT"
 
 # Start MongoDB first
 echo "1️⃣  Starting MongoDB..."
-docker-compose up -d mongodb
-sleep 5
-echo -e "${GREEN}✓ MongoDB started${NC}"
+docker compose up -d mongodb
+echo "Waiting for MongoDB to be ready..."
+sleep 10
+
+# Wait for MongoDB health check
+MAX_WAIT=30
+WAITED=0
+until docker compose ps mongodb | grep -q "healthy" || [ $WAITED -eq $MAX_WAIT ]; do
+    echo "Waiting for MongoDB health check... ($WAITED/$MAX_WAIT)"
+    sleep 2
+    ((WAITED+=2))
+done
+
+if [ $WAITED -eq $MAX_WAIT ]; then
+    echo -e "${YELLOW}⚠ MongoDB health check timeout, continuing anyway...${NC}"
+else
+    echo -e "${GREEN}✓ MongoDB is healthy${NC}"
+fi
 echo ""
 
-# Start Rust Risk Engine
-echo "2️⃣  Starting Risk Engine (Rust)..."
-cd risk-engine-rust
-MONGO_URI=mongodb://localhost:27017 PORT=8081 cargo run --release &
-RUST_PID=$!
-cd ..
-echo -e "${GREEN}✓ Risk Engine started (PID: $RUST_PID)${NC}"
-sleep 3
+# Option 1: Use Docker Compose for all services (RECOMMENDED)
+echo -e "${BLUE}Starting all services with Docker Compose...${NC}"
+docker compose up -d
+
 echo ""
+echo "Waiting for services to start..."
+sleep 15
 
-# Start Go Gateway
-echo "3️⃣  Starting Gateway (Go)..."
-cd gateway-go
-MONGO_URI=mongodb://localhost:27017 PORT=8080 RISK_ENGINE_URL=http://localhost:8081 go run main.go &
-GO_PID=$!
-cd ..
-echo -e "${GREEN}✓ Gateway started (PID: $GO_PID)${NC}"
-sleep 2
 echo ""
-
-# Start .NET Control Plane
-echo "4️⃣  Starting Control Plane (.NET)..."
-cd control-dotnet
-ASPNETCORE_URLS=http://localhost:8082 dotnet run &
-DOTNET_PID=$!
-cd ..
-echo -e "${GREEN}✓ Control Plane started (PID: $DOTNET_PID)${NC}"
-sleep 2
-echo ""
-
-# Start Ruby Analyst Tools
-echo "5️⃣  Starting Analyst Tools (Ruby)..."
-cd analyst-ruby
-PORT=4567 MONGO_URI=mongodb://localhost:27017 bundle exec ruby app.rb &
-RUBY_PID=$!
-cd ..
-echo -e "${GREEN}✓ Analyst Tools started (PID: $RUBY_PID)${NC}"
-sleep 2
-echo ""
-
-# Save PIDs to file
-echo "$RUST_PID" > /tmp/vaultedge_rust.pid
-echo "$GO_PID" > /tmp/vaultedge_go.pid
-echo "$DOTNET_PID" > /tmp/vaultedge_dotnet.pid
-echo "$RUBY_PID" > /tmp/vaultedge_ruby.pid
-
 echo "=============================="
 echo "✅ All services started!"
 echo "=============================="
@@ -76,12 +63,19 @@ echo "  Gateway:       http://localhost:8080"
 echo "  Risk Engine:   http://localhost:8081"
 echo "  Control Plane: http://localhost:8082"
 echo "  Analyst Tools: http://localhost:4567"
+echo "  MongoDB:       mongodb://localhost:27017"
 echo ""
 echo "Health Checks:"
 echo "  curl http://localhost:8080/health"
 echo "  curl http://localhost:8081/health"
 echo "  curl http://localhost:8082/health"
 echo "  curl http://localhost:4567/health"
+echo ""
+echo "View Logs:"
+echo "  docker compose logs -f gateway"
+echo "  docker compose logs -f risk-engine"
+echo "  docker compose logs -f control-plane"
+echo "  docker compose logs -f analyst-tools"
 echo ""
 echo "To stop all services: ./infra/stop-all.sh"
 echo ""
